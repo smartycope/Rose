@@ -51,6 +51,7 @@ class MainWindow(QMainWindow):
         # self.index = 0
         self._questionsAnswered = 0
         self.blockDealbreakerMessage = False
+        self._loadedYet = False
 
         self.files = FileManager(Singleton.saves, self)
 
@@ -60,6 +61,7 @@ class MainWindow(QMainWindow):
         if Singleton.debugging:
             debug("This is only here for debugging", clr=3)
             self.load(mode=PREF, file='/home/leonard/hello/python/Rose/saves/boilerplate-copy.pref')
+            self.load(mode=EVAL, file='/home/leonard/hello/python/Rose/saves/boilerplate-copy.eval')
             # self.tabs.setCurrentIndex(1)
 
     def keyPressEvent(self, key):
@@ -70,7 +72,8 @@ class MainWindow(QMainWindow):
         if key.text() == 'y':
             self.responseSlider.setValue(max)
         elif key.text() == '0':
-            self.responseSlider.setValue(min)
+            # This is contested
+            self.responseSlider.setValue(max)
         elif key.text() == '1':
             self.responseSlider.setValue(10 if Singleton.mode == EVAL else -80)
         elif key.text() == '2':
@@ -199,7 +202,11 @@ class MainWindow(QMainWindow):
             self.maxUnknownsBox.setValue(int(maxUnknowns))
             self.dealbreakerLimitBox.setValue(int(dealbreakerLimit * 100))
         if json is not None:
-            self.initLists(json)
+            if not self._loadedYet:
+                self.initLists(json)
+                self._loadedYet = True
+            else:
+                self.addModeDataToLists(mode, json)
             # Manually set the combo box to start out on Misc.
             # initLists() should fill it
             try:
@@ -208,16 +215,21 @@ class MainWindow(QMainWindow):
                 # It's not that important
                 pass
 
+    def addModeDataToLists(self, mode, json):
+        # Loop through the traits
+        for i in range(1, self.tabs.count()):
+            try:
+                self.tabs.widget(i).addModeData(mode, json[self.tabs.tabText(i)])
+            except KeyError:
+                debug(f'Error: {self.tabs.tabText(i)} isnt in the json', clr=-1, throwError=Singleton.debugging)
+
     def initLists(self, json):
         """ Initializes all the lists and fills them will all the questions """
-        debug('init lists called')
+        debug()
         # Remove all the tabs except the Options tab
-        # for i in range(self.tabs.count()):
-        #     if self.tabs.tabText(i) != "Options":
-        #         self.tabs.removeTab(i)
         self.tabs.clear()
         self.tabs.addTab(self._optionsWidget, "Options")
-        #* Fill the manual adding combo box
+        # Fill the manual adding combo box
         self.groupSelector.clear()
 
         #* Fill the list boxes and add the tabs
@@ -396,9 +408,6 @@ class MainWindow(QMainWindow):
         """ The actual algorithm part -- calculate if they fit our criteria """
         # Save the current mode file first
         self.save()
-        # This shouldn't be necissary, because the only way to change the other mode is to be in that mode,
-        # and switchMode() saves the file
-        # self.save(not Singleton.mode)
 
         person = 0
         max = 0
@@ -406,8 +415,6 @@ class MainWindow(QMainWindow):
         skipped = 0
         unanswered = 0
 
-        # Loop through the catagories
-        # for prefTraits, evalTraits in zip(self.selectedPrefJson.values(), self.selectedEvalJson.values()):
         # Loop through the traits
         for i in range(1, self.tabs.count()):
             for k in range((list := self.tabs.widget(i)).count()):
@@ -415,6 +422,8 @@ class MainWindow(QMainWindow):
                 # If they skipped or didn't answer a preferences question, we just assume it wasn't applicable to them
                 if trait.prefState == ANSWERED:
                     if trait.evalState == ANSWERED:
+                        debug(trait.eval)
+                        debug(trait.pref)
                         person += (trait.eval / 100) * trait.pref
                         max    += trait.pref
                         count  += 1

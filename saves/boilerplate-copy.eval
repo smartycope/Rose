@@ -4,18 +4,18 @@
         "Important": [
             [
                 "You want to enter the relationship with them",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "You enjoy spending time around them",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "They enjoy spending time around you",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "They speak the same language you do",
@@ -24,83 +24,83 @@
             ],
             [
                 "You can talk to them easily",
-                50,
+                100,
                 1
             ],
             [
                 "They can talk to you easily",
-                30,
+                100,
                 1
             ],
             [
                 "You feel like you can tell them anything",
-                0,
-                2
+                100,
+                1
             ],
             [
                 "They feel like they can tell you anything",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "They want a similar amount of kids",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "They are passionate/enthusiastic about whatever it is they're into",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "You respect each other",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "They are a good communicator",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "They understand you to some extent",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "You understand them to some extent",
-                0,
-                0
+                100,
+                1
             ],
             [
                 "They share you religious belives",
-                0,
-                0
+                -100,
+                1
             ],
             [
                 "They care about religion",
-                0,
-                0
+                -100,
+                1
             ],
             [
                 "You've known each other for more than a month",
-                0,
-                0
+                -100,
+                1
             ],
             [
                 "You consider them to be a friend",
-                0,
-                0
+                -100,
+                1
             ],
             [
                 "They don't use their emotions to manipulate you",
                 0,
-                0
+                1
             ],
             [
                 "They don't use your emotions to manipulate you",
                 0,
-                0
+                2
             ],
             [
                 "They don't manipulate you",

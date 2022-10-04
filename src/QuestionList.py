@@ -65,6 +65,20 @@ class QuestionList(QListWidget):
         self.acceptAnswer()
         self.incrementQuestion()
 
+    def addModeData(self, mode, data):
+        # This is SO innefficent
+        for jsn in data:
+            for i in range(self.count()):
+                if self.item(i).trait == data[0]:
+                    if mode == PREF:
+                        self.item(i).pref = data[1]
+                        self.item(i).prefState = data[2]
+                    else:
+                        self.item(i).eval = data[1]
+                        self.item(i).evalState = data[2]
+
+
+
     # Used to change the current question
     def incrementQuestion(self, amt=1) -> int:
         """ Note: This is only meant to accept -1 or 1 for the amt """

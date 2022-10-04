@@ -12,17 +12,18 @@ class ResultsMenu(QDialog):
         uic.loadUi(Singleton.ui / "results.ui", self)
         # self.centralWidget().setLayout(self.mainLayout)
 
-        # debug(perfectScore)
-        # debug(score)
-        # debug(answeredCount)
-        # debug(skipCount)
-        # debug(unanswered)
-        # debug(tolerance)
+        debug(perfectScore)
+        debug(score)
+        debug(answeredCount)
+        debug(skipCount)
+        debug(unanswered)
+        debug(tolerance)
 
         percentage = round((score/perfectScore) * 100, SIG_FIGS)
 
         self.matchBar.setValue(percentage)
-        self.friendZone.setMinimumSize(QSize(debug(round(self.width() * tolerance)), 0))
+        offset = 40
+        self.friendZone.setMinimumSize(QSize(round(self.width() * tolerance) - offset, 0))
 
         mainText = f'Of the {answeredCount} questions answered, {skipCount} skipped, and {unanswered} unanswered, ' \
                    f'they got a score of {score} out of a maximum possible score of {perfectScore}. ' \

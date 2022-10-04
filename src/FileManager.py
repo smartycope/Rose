@@ -191,6 +191,8 @@ class FileManager:
                         newAttr[catagory].append([trait, 0, 0])
             return newAttr
 
+        newFilename = join(dirname(file), basename(file).split('.')[0] + '.' + ('pref' if toMode == PREF else 'eval'))
+
         with open(file, 'r') as f:
             fromJson = jsonc.load(f)
             toJson = {}
@@ -230,7 +232,6 @@ class FileManager:
             else:
                 debug('Impossible state reached', color=-1)
 
-        newFilename = join(dirname(file), basename(file).split('.')[0] + '.' + ('pref' if toMode == PREF else 'eval'))
         with open(newFilename, 'w+') as toFile:
             # debug(toJson, f'writing to file {newFilename}')
             jsonc.dump(toJson, toFile, indent=4)
