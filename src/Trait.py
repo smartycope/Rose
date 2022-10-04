@@ -1,51 +1,66 @@
-from PyQt5.QtWidgets import QListWidgetItem
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import QListWidgetItem
+from PyQt6.QtCore import Qt
 from Cope import debug, todo
+from Singleton import *
+from typing import Union
 
-EVAL = 0
-PREF = 1
-
-NOT_APPLICABLE = -2
+# Depricated, if evalState it's skipped, if prefState it's setHidde
+# NOT_APPLICABLE = -2
 NOT_ANSWERED   = 0
 ANSWERED       = 1
 SKIPPED        = 2
 
-class Trait:
+todo('sort lists by state')
+
+class Trait(QListWidgetItem):
     # If this is false, it just strikes them out instead
-    todo("This option doesn't actually work")
-    HIDE_SKIPPED_PREF_QUESTIONS = False
-    def __init__(self, trait, value=0, state=NOT_ANSWERED):
+    HIDE_UNANSWERED_PREF_QUESTIONS = True
+
+
+    def __init__(self, trait, pref=0, eval=0, evalState=NOT_ANSWERED, prefState=NOT_ANSWERED, parent=None):
+        super().__init__(trait, parent=parent)
         self.trait = trait
-        self.state = state
-        self.value = value
+        # self.state = state
+        # self.value = value
+        self.pref = pref
+        self.eval = eval
+        self.prefState = prefState
+        self.evalState = evalState
+        self.update()
 
-    def asListItem(self, mode):
-        item = QListWidgetItem(self.trait)
-        # item.setTristate(True)
-        self.updateListItem(item, mode)
-        return item
+    def update(self):
+        def setStrikeout(to):
+            font = self.font()
+            font.setStrikeOut(to)
+            self.setFont(font)
 
-    def updateListItem(self, item, mode):
-        if (self.value != 0):
-            assert self.state == ANSWERED, "Somewhere you're updating a Trait weight or modifier without setting the state"
-        # if mode == EVAL:
-            # item.setTristate(True)
         if self.state == ANSWERED:
-            item.setCheckState(Qt.CheckState.Checked)
-        elif self.state == SKIPPED and mode == EVAL:
-            item.setCheckState(Qt.CheckState.PartiallyChecked)
+            self.setCheckState(Qt.CheckState.Checked)
+            setStrikeout(False)
+            self.setHidden(False)
+        # This means it was deleted, but we might want it later
+        elif Singleton.mode == PREF and self.prefState == SKIPPED:
+            self.setCheckState(Qt.CheckState.Unchecked)
+            setStrikeout(True)
+            self.setHidden(False)
+        # This means it was deleted
+        elif (Singleton.mode == EVAL and self.prefState == SKIPPED) or \
+             (Singleton.mode == EVAL and self.prefState == NOT_ANSWERED and self.HIDE_UNANSWERED_PREF_QUESTIONS):
+            self.setCheckState(Qt.CheckState.Unchecked)
+            setStrikeout(False)
+            self.setHidden(True)
+        # This means it was N/A'd
+        elif Singleton.mode == EVAL and self.evalState == SKIPPED:
+            self.setCheckState(Qt.CheckState.PartiallyChecked)
+            setStrikeout(False)
+            self.setHidden(False)
+        elif self.state == NOT_ANSWERED:
+            self.setCheckState(Qt.CheckState.Unchecked)
+            setStrikeout(False)
+            self.setHidden(False)
 
-        # If we're setting preferences and they skip a question, we're discounting it
-        elif self.state == SKIPPED and mode == PREF:
-            item.setCheckState(Qt.CheckState.Unchecked)
-            font = item.font()
-            font.setStrikeOut(True)
-            item.setFont(font)
-            if self.HIDE_SKIPPED_PREF_QUESTIONS:
-                item.setHidden(True)
-        else:
-            pass
-            # item.setCheckState(Qt.CheckState.Unchecked)
+    def isDealbreaker(self):
+        return self.pref > Singleton.MAX_VALUE or self.pref < -Singleton.MAX_VALUE
 
     def __str__(self):
         if self.state == NOT_APPLICABLE:
@@ -56,12 +71,39 @@ class Trait:
             state = 'answered'
         elif self.state == SKIPPED:
             state = 'skipped'
-        return f'Trait["{self.trait}": {self.value}, {state}]'
+        return f'Trait["{self.trait}": pref:{self.pref}, eval:{self.eval}, {state}]'
 
-#* JSON Methods
+    @property
+    def state(self):
+        return self.prefState if Singleton.mode == PREF else self.evalState
+    @state.setter
+    def state(self, to):
+        if Singleton.mode == PREF:
+            self.prefState = to
+        else:
+            self.evalState = to
+        self.update()
+
+    @property
+    def value(self):
+       return self.pref if Singleton.mode == PREF else self.eval
+    @value.setter
+    def value(self, to):
+        if Singleton.mode == PREF:
+            self.pref = to
+        else:
+            self.eval = to
+
     @staticmethod
-    def fromJSON(json):
-        return Trait(*json)
+    def deserialize(json, mode=None):
+        if mode is None:
+            mode = Singleton.mode
+        if mode == PREF:
+            return Trait(trait=json[0], pref=json[1], prefState=json[2])
+        else:
+            return Trait(trait=json[0], eval=json[1], evalState=json[2])
 
-    def toJSON(self):
-        return [self.trait, self.value, self.state]
+    def serialize(self, mode=None):
+        if mode is None:
+            mode = Singleton.mode
+        return [self.trait, self.pref if mode == PREF else self.eval, self.prefState if mode == PREF else self.evalState]
