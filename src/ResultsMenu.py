@@ -10,14 +10,9 @@ class ResultsMenu(QDialog):
         SIG_FIGS = None
         super(QDialog, self).__init__()
         uic.loadUi(Singleton.ui / "results.ui", self)
-        # self.centralWidget().setLayout(self.mainLayout)
 
-        debug(perfectScore)
-        debug(score)
-        debug(answeredCount)
-        debug(skipCount)
-        debug(unanswered)
-        debug(tolerance)
+        if perfectScore == 0:
+            return
 
         percentage = round((score/perfectScore) * 100, SIG_FIGS)
 

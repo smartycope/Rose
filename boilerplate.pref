@@ -97,6 +97,8 @@
             ["They come from a big family", 0, 0],
             ["They come from money", 0, 0],
             ["They have a good GPA", 0, 0],
+            ["They're a perfectionist", 0, 0],
+            ["They have to do everything themselves", 0, 0],
         ],
         "Physical Attributes": [
             ["General physical attractiveness", 0, 0],

@@ -1,32 +1,52 @@
 from PyQt6.QtWidgets import QListWidgetItem
 from PyQt6.QtCore import Qt
-from Cope import debug, todo
+from Cope import debug, todo, depricated
 from Singleton import *
 from typing import Union
 
-# Depricated, if evalState it's skipped, if prefState it's setHidde
+# Depricated, if evalState it's skipped, if prefState it's setHidden
 # NOT_APPLICABLE = -2
 NOT_ANSWERED   = 0
 ANSWERED       = 1
 SKIPPED        = 2
 
-todo('sort lists by state')
+# Dealbreaker types
+# These are specifically picked so they can be multiplied by
+# Singleton.dealbreakerBonus and added to prefValue
+MUST = 1
+MUST_NOT = -1
+NOT = 0
 
 class Trait(QListWidgetItem):
+    """ A specific attribute. Holds both pref and eval values and states.
+        The properties state and value both fetch the current mode from Singleton
+        and return the appropriate state. Value also incorperates dealbreaker, and
+        will return appropriately adjusted values if it's a dealbreaker or not """
     # If this is false, it just strikes them out instead
     HIDE_UNANSWERED_PREF_QUESTIONS = True
 
-
-    def __init__(self, trait, pref=0, eval=0, evalState=NOT_ANSWERED, prefState=NOT_ANSWERED, parent=None):
+    def __init__(self, trait, pref=0, eval=0, evalState=NOT_ANSWERED, prefState=NOT_ANSWERED, dealbreaker=NOT, parent=None):
         super().__init__(trait, parent=parent)
-        self.trait = trait
-        # self.state = state
-        # self.value = value
+        self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsDragEnabled | Qt.ItemFlag.ItemNeverHasChildren | Qt.ItemFlag.ItemIsEnabled)
+        # self.trait = trait
+        self.setText(trait)
         self.pref = pref
         self.eval = eval
         self.prefState = prefState
         self.evalState = evalState
+        self.dealbreakerState = dealbreaker
         self.update()
+
+    def checkDealbreaker(self, tolerance):
+        """ Tolerance is between 0 and 100, NOT 0 and 1
+            returns True if it passes """
+        if self.dealbreakerState == MUST:
+            #* Whether this is > or >= is actually kinda important
+            return self.eval >= tolerance
+        elif self.dealbreakerState == MUST_NOT:
+            return self.eval <= tolerance
+        else:
+            return True
 
     def update(self):
         def setStrikeout(to):
@@ -40,7 +60,7 @@ class Trait(QListWidgetItem):
             self.setHidden(False)
         # This means it was deleted, but we might want it later
         elif Singleton.mode == PREF and self.prefState == SKIPPED:
-            self.setCheckState(Qt.CheckState.Unchecked)
+            self.setCheckState(Qt.CheckState.PartiallyChecked)
             setStrikeout(True)
             self.setHidden(False)
         # This means it was deleted
@@ -58,9 +78,13 @@ class Trait(QListWidgetItem):
             self.setCheckState(Qt.CheckState.Unchecked)
             setStrikeout(False)
             self.setHidden(False)
+        else:
+            debug()
 
+    @depricated
     def isDealbreaker(self):
-        return self.pref > Singleton.MAX_VALUE or self.pref < -Singleton.MAX_VALUE
+        return bool(self.dealbreakerState)
+        # return self.pref > Singleton.MAX_VALUE or self.pref < -Singleton.MAX_VALUE
 
     def __str__(self):
         if self.state == NOT_APPLICABLE:
@@ -75,7 +99,10 @@ class Trait(QListWidgetItem):
 
     @property
     def state(self):
-        return self.prefState if Singleton.mode == PREF else self.evalState
+        if Singleton.mode == PREF:
+            return self.prefState
+        else:
+            return self.evalState
     @state.setter
     def state(self, to):
         if Singleton.mode == PREF:
@@ -86,24 +113,50 @@ class Trait(QListWidgetItem):
 
     @property
     def value(self):
-       return self.pref if Singleton.mode == PREF else self.eval
+        # Dealbreaker state enum values are picked specifically so you can do this
+        if Singleton.mode == PREF:
+            return (self.pref + (Singleton.DEALBREAKER_BONUS * self.dealbreakerState))
+        else:
+            return self.eval
     @value.setter
     def value(self, to):
         if Singleton.mode == PREF:
+            if to > Singleton.MAX_VALUE:
+                self.dealbreakerState = MUST
+            elif to < -Singleton.MAX_VALUE:
+                self.dealbreakerState = MUST_NOT
+            else:
+                self.dealbreakerState = NOT
+
             self.pref = to
         else:
             self.eval = to
+
+    @property
+    def trait(self):
+       return self.text()
+    @trait.setter
+    def trait(self, to):
+       self.setText(to)
 
     @staticmethod
     def deserialize(json, mode=None):
         if mode is None:
             mode = Singleton.mode
         if mode == PREF:
-            return Trait(trait=json[0], pref=json[1], prefState=json[2])
+            if json[1] > Singleton.MAX_VALUE:
+                dealbreakerState = MUST
+            elif json[1] < -Singleton.MAX_VALUE:
+                dealbreakerState = MUST_NOT
+            else:
+                dealbreakerState = NOT
+
+            return Trait(trait=json[0], pref=json[1], prefState=json[2], dealbreaker=dealbreakerState)
         else:
             return Trait(trait=json[0], eval=json[1], evalState=json[2])
 
     def serialize(self, mode=None):
         if mode is None:
             mode = Singleton.mode
-        return [self.trait, self.pref if mode == PREF else self.eval, self.prefState if mode == PREF else self.evalState]
+        # return [self.trait, self.pref if mode == PREF else self.eval, self.prefState if mode == PREF else self.evalState]
+        return [self.trait, self.value, self.prefState if mode == PREF else self.evalState]

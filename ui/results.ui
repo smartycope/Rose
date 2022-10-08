@@ -29,9 +29,7 @@
    <item>
     <widget class="QLabel" name="resultsLabel">
      <property name="text">
-      <string>Nice Text Here
-with
-three lines</string>
+      <string>You haven't evaluated them yet</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>

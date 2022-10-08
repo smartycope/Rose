@@ -1,20 +1,28 @@
-import jstyleson as jsonc
 import os
-from PyQt6.QtWidgets import QApplication, QListWidget, QListView, QMessageBox, QAbstractButton
-from PyQt6.QtWidgets import QFileDialog, QMainWindow, QWidget, QDialogButtonBox, QSlider
-from os.path import dirname, join, basename
 import shutil
-from Cope import debug, todo
-from Singleton import *
-from Trait import NOT_ANSWERED, ANSWERED, SKIPPED
+from os.path import basename, dirname, join
 
-class FileManager:
+import jstyleson as jsonc
+from Cope import debug, todo
+from PyQt6.QtCore import pyqtSignal, QObject
+from PyQt6.QtWidgets import (QAbstractButton, QApplication, QDialogButtonBox,
+                             QFileDialog, QListView, QListWidget, QMainWindow,
+                             QMessageBox, QSlider, QWidget)
+
+from Singleton import *
+from Trait import ANSWERED, NOT_ANSWERED, SKIPPED
+
+
+class FileManager(QObject):
+    """ A helper class to handle all the file operations for us.
+        Inherits from QObject just so we can use signals"""
+    prefFileChanged = pyqtSignal(str)
+    evalFileChanged = pyqtSignal(str)
+
     def __init__(self, saveFolder, parent=None):
+        super().__init__()
         self.prefFile = None
-        self.prefJson = None
         self.evalFile = None
-        self.evalJson = None
-        self.saves = saveFolder
         self.parent = parent
 
     def getFile(self, save=True, mode=None):
@@ -30,6 +38,7 @@ class FileManager:
                     caption=f'Save your personal preferences file'
                             if mode == PREF else
                             'Save your responses about the person you\'re considering',
+                    directory=str(Singleton.saves),
                     filter=fileType,
                     initialFilter=fileType
                 )[0]
@@ -38,6 +47,7 @@ class FileManager:
                 caption=f'Open your personal preferences file'
                         if mode == PREF else
                         'Open a file you saved on someone',
+                directory=str(Singleton.saves),
                 filter=fileType,
                 initialFilter=fileType
             )[0]
@@ -45,54 +55,29 @@ class FileManager:
         if file != '' and file is not None:
             if not file.endswith(fileType[1:]):
                 file = file + fileType[1:]
-            # self.setFile(mode, file)
 
         return file
 
-        # if Singleton.mode == PREF:
-        #     name = f'{self.name}{"p" if self.name == "" else "P"}references.json'
-        # elif Singleton.mode == EVAL:
-        #     name = f'{self.name}{"a" if self.name == "" else "A"}ttributes.json'
-
-    def setFile(self, mode, file, json):
-        """ Sets a given file to be the cannonical file that we're using for the given mode, and sets the labels appropriately
-            Also sets the cannonical json to be used by the calculate function and checking for dealbreakers """
-        # if file is None:
-        #     file = self.getFile(save=False, mode=mode)
-
-        if mode == EVAL:
-            self.evalFile = file
-            self.evalJson = json
-            # It's easiest just to do this here
-            self.parent.evalFileLabel.setText(os.path.basename(file))
-        elif mode == PREF:
-            self.prefFile = file
-            self.prefJson = json
-            self.parent.prefFileLabel.setText(os.path.basename(file))
-
-        # This isn't up to date until loadFile, so don't call it here
-        # self.fillLists()
-
     def getSavedFilename(self, mode=None):
-        """ Returns the applicable filename if we've already selected one, otherwise None """
+        """ Returns the applicable filename if we've already selected one,
+            otherwise None """
         if mode is None:
             mode = Singleton.mode
+
         if mode == EVAL and self.evalFile is not None and self.evalFile != '':
             return self.evalFile
         elif mode == PREF and self.prefFile is not None and self.prefFile != '':
             return self.prefFile
-        else:
-            return None
 
     def save(self, json, mode, tolerance, maxUnknowns, dealbreakerLimit):
         # If we've already asked, don't ask again
         if (file := self.getSavedFilename(mode)) is None:
-            return
+            file = self.getFile(save=True, mode=mode)
+            if file is None or file == '':
+                return
 
         with open(file, 'w') as f:
-            # Don't forget to update the cannonical saved jsons (for dealbreaker checking and the final calculation, which both require weights and modifiers)
             if mode == PREF:
-                self.prefJson = json
                 jsonc.dump({
                     "__type__": 'PREF',
                     "Tolerance": tolerance,
@@ -103,14 +88,17 @@ class FileManager:
                     }
                 }, f, indent=4)
                 print(f'Saved {file}!')
+                self.prefFile = file
+                self.prefFileChanged.emit(str(file))
 
             elif mode == EVAL:
-                self.evalJson = json
                 jsonc.dump({
                     '__type__': 'EVAL',
                     'Attributes': json
                 }, f, indent=4)
                 print(f'Saved {file}!')
+                self.evalFile = file
+                self.evalFileChanged.emit(str(file))
             else:
                 debug('unreachable state reached!', clr=-1)
 
@@ -136,7 +124,9 @@ class FileManager:
                     j = jsonc.load(f)
                     # We selected an eval file instead of a pref file
                     if j['__type__'] != 'PREF':
-                        QMessageBox.critical(self.parent, 'Wrong File Selected', 'It looks like you selected a file on a specific person, not a preferences file.')
+                        QMessageBox.critical(self.parent, 'Wrong File Selected',
+                            'It looks like you selected a file on a specific '
+                            'person, not a preferences file.')
                         todo('add optional autoconversion here')
                         return (None,)*4
 
@@ -144,7 +134,14 @@ class FileManager:
                     maxUnknowns = float(j["Settings"]["max unknowns"])
                     dealbreakerLimit = float(j["Settings"]["dealbreaker limit"])
                     json = j['Attributes']
-                    self.setFile(PREF, file, json)
+                    self.prefFile = file
+                    self.prefFileChanged.emit(str(file))
+                    # Since the eval file is essentially attached to the pref
+                    # file, we want to reset the eval file if we change the
+                    # pref file
+                    self.evalFile = None
+                    self.evalFileChanged.emit(None)
+
                 # The file is invalid
                 except Exception as err:
                     debug(err, throw=True)
@@ -166,7 +163,9 @@ class FileManager:
                     maxUnknowns = None
                     dealbreakerLimit = None
                     json = j['Attributes']
-                    self.setFile(EVAL, file, json)
+                    self.evalFile = file
+                    self.evalFileChanged.emit(str(file))
+
                 # The file is invalid
                 except Exception as err:
                         debug(err, stackTrace=True)
@@ -181,6 +180,7 @@ class FileManager:
         """ Take the given file, and converts it from the mode it's currently in to 'to'
             Losses all the state and value data, just keeps the questions
             If going from pref -> eval, it also drops the skipped questions, but not vice versa """
+
         def stripData(attr, toMode):
             newAttr = {}
             for catagory in attr:
@@ -214,8 +214,8 @@ class FileManager:
                     # nameAddOn = ' - preferences'
                 # The file is invalid
                 except Exception as err:
-                    debug(err, stackTrace=True)
                     QMessageBox.critical(self.parent, 'Invalid File', 'It looks like the file you selected has an invalid format.')
+                    debug(err, stackTrace=True, raiseError=Singleton.debugging)
                     return file
 
             # We're going from pref -> eval

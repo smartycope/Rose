@@ -20,22 +20,18 @@ class QuestionList(QListWidget):
     reachedEnd = pyqtSignal()
     reachedBegin = pyqtSignal()
     questionAccepted = pyqtSignal()
-    resetQuestion = pyqtSignal()
+    skipQuestion = pyqtSignal()
 
-    def __init__(self, catagory, traits=[], parent=None):
+    def __init__(self, traits=[], parent=None):
         super().__init__(parent)
         # Connect all the signals
         self.bindSignals()
 
         # So it handles clicking on an item slightly differently
         self.itemClicked.connect(self.onTraitClicked)
-        # Set the icon sizes
         self.setIconSize(QSize(self.ICON_SIZE, self.ICON_SIZE))
-        # If we're doing word wrap or not
         self.setWordWrap(self.WORD_WRAP)
-        todo('Set the keys to be handled by the window instead')
-        # Set the keys to be handled by the window instead
-        # self.keyPressEvent = parent.keyPressEvent
+        self.setAlternatingRowColors(True)
 
         self._loadTraits(traits)
 
@@ -77,11 +73,9 @@ class QuestionList(QListWidget):
                         self.item(i).eval = data[1]
                         self.item(i).evalState = data[2]
 
-
-
-    # Used to change the current question
     def incrementQuestion(self, amt=1) -> int:
-        """ Note: This is only meant to accept -1 or 1 for the amt """
+        """ Used to change the current question
+            Note: This is only meant to accept -1 or 1 for the amt """
         # i = self.index + amt
         # self.setCurrentIndex(self.currentIndex() + amt)
         # self.setCurrentItem(self.item(self.currentIndex() + amt))
@@ -90,7 +84,6 @@ class QuestionList(QListWidget):
         while (item := self.currentItem()) is not None and item.isHidden():
             i = self.currentRow() + amt
             self.setCurrentRow(i)
-
 
         #* Handle looping the tabs when we're at the end or beginning
         # If we're at the top and we hit back, go to the previous tab, if there is one
@@ -105,12 +98,17 @@ class QuestionList(QListWidget):
         return i
 
     def skip(self):
-        if self.currentItem().state != ANSWERED:
-            self.currentItem().state = SKIPPED
+        if (item := self.currentItem()) is not None:
+            self.skipQuestion.emit()
 
-        # If you go back to a question you've already answered and hit skip, then it resets the question
-        if self.currentItem().state == ANSWERED:
-            self.resetAnswer(state=SKIPPED)
+            # if item.state != ANSWERED:
+            item.state = SKIPPED
+
+            # If you go back to a question you've already answered and hit skip,
+            # then it resets the question
+            # if item.state == ANSWERED:
+                # self.resetAnswer(state=SKIPPED)
+                # self.skipQuestion.emit()
 
         self.incrementQuestion()
 
@@ -119,21 +117,18 @@ class QuestionList(QListWidget):
         # self.switchTrait(self.currentRow(), self.currentIndex(), False)
         pass
 
-    # Run when we want to "set" the current trait
     def acceptAnswer(self):
+        """ Run when we want to "set" the current trait """
         if self.currentItem() is not None:# and self.currentItem().state != ANSWERED:
             self.currentItem().state = ANSWERED
-            debug('question accepted')
+            debug('question accepted', active=Singleton.debugging)
 
         self.questionAccepted.emit()
         self.updateGUI.emit()
 
     def resetAnswer(self, state=NOT_ANSWERED):
         """ Resets the current trait to default values """
-        if self.currentItem().state == ANSWERED:
-            self.resetQuestion.emit()
-
-        self.currentItem().value = 0
+        self.currentItem().value = 0 if Singleton.mode == PREF else int(Singleton.MAX_VALUE / 2)
 
     def serialize(self):
         l = []
