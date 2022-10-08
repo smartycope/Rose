@@ -1,6 +1,5 @@
 from PyQt6.QtWidgets import QListWidgetItem
 from PyQt6.QtCore import Qt
-from Cope import debug, todo, depricated
 from Singleton import *
 from typing import Union
 
@@ -22,13 +21,12 @@ class Trait(QListWidgetItem):
         The properties state and value both fetch the current mode from Singleton
         and return the appropriate state. Value also incorperates dealbreaker, and
         will return appropriately adjusted values if it's a dealbreaker or not """
-    # If this is false, it just strikes them out instead
+    # If this is false, it just strikes them out instead -- though it hasn't been tested
     HIDE_UNANSWERED_PREF_QUESTIONS = True
 
     def __init__(self, trait, pref=0, eval=0, evalState=NOT_ANSWERED, prefState=NOT_ANSWERED, dealbreaker=NOT, parent=None):
         super().__init__(trait, parent=parent)
         self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsDragEnabled | Qt.ItemFlag.ItemNeverHasChildren | Qt.ItemFlag.ItemIsEnabled)
-        # self.trait = trait
         self.setText(trait)
         self.pref = pref
         self.eval = eval
@@ -78,13 +76,6 @@ class Trait(QListWidgetItem):
             self.setCheckState(Qt.CheckState.Unchecked)
             setStrikeout(False)
             self.setHidden(False)
-        else:
-            debug()
-
-    @depricated
-    def isDealbreaker(self):
-        return bool(self.dealbreakerState)
-        # return self.pref > Singleton.MAX_VALUE or self.pref < -Singleton.MAX_VALUE
 
     def __str__(self):
         if self.state == NOT_APPLICABLE:
@@ -158,5 +149,4 @@ class Trait(QListWidgetItem):
     def serialize(self, mode=None):
         if mode is None:
             mode = Singleton.mode
-        # return [self.trait, self.pref if mode == PREF else self.eval, self.prefState if mode == PREF else self.evalState]
         return [self.trait, self.value, self.prefState if mode == PREF else self.evalState]

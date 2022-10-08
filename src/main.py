@@ -6,7 +6,10 @@ from os.path import basename, dirname, join
 from pathlib import Path
 
 import jstyleson as jsonc
-from Cope import debug, todo, unreachableState, depricated, constrain
+try:
+    from Cope import debug
+except ImportError:
+    debug = lambda *args, **_: print(*args)
 from PyQt6 import uic
 from PyQt6.QtCore import QEvent, QFile, QSize, Qt
 from PyQt6.QtGui import QIcon
@@ -19,14 +22,6 @@ from QuestionList import QuestionList
 from ResultsMenu import ResultsMenu
 from Singleton import *
 from Trait import *
-
-# Ways to change the question:
-    # click "next"
-    # click "back"
-    # click "skip"
-    # click on a question
-    # arrow keys (eventually)
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -47,8 +42,6 @@ class MainWindow(QMainWindow):
         # Save the options tab widget so we can reinsert it after calling tabs.clear()
         self._optionsWidget = self.Options
 
-        # self.index = 0
-        self._questionsAnswered = 0
         self.blockDealbreakerMessage = False
         self._loadedYet = False
 
@@ -61,13 +54,12 @@ class MainWindow(QMainWindow):
         self.switchMode(Singleton.startingMode, save=False, reload=True)
 
         if Singleton.debugging:
-            debug("This is only here for debugging", clr=3)
-            self.load(mode=PREF, file='/home/leonard/hello/python/Rose/saves/boilerplate-copy.pref')
-            # self.load(mode=EVAL, file='/home/leonard/hello/python/Rose/saves/boilerplate-copy.eval')
+            pass
+            # debug("This is only here for debugging", clr=3)
+            # self.load(mode=PREF, file=Singleton.saves / 'testing.pref')
             # self.tabs.setCurrentIndex(1)
 
     def keyPressEvent(self, key):
-        # debug('key pressed')
         max = self.maxValue()
         min = self.minValue()
 
@@ -106,15 +98,6 @@ class MainWindow(QMainWindow):
             self.skipButton.clicked.emit()
         elif key.text() == 'b':
             self.backButton.clicked.emit()
-        # elif key.key() == Qt.Key.Key_Return:
-            # if key.modifiers() & Qt.KeyboardModifier.ShiftModifier:
-                # self.backButton.clicked.emit()
-            # else:
-                # self.nextButton.clicked.emit()
-        # elif key.key() == Qt.Key.Key_Up:
-            # self.backButton.clicked.emit()
-        # elif key.key() == Qt.Key.Key_Down:
-            # self.nextButton.clicked.emit()
         elif key.key() == Qt.Key.Key_Tab:
             debug('tab pressed!')
             if key.modifiers() & Qt.KeyboardModifier.ShiftModifier:
@@ -160,7 +143,6 @@ class MainWindow(QMainWindow):
         self.fileButtonBox.clicked.connect(seperateButtons)
 
         self.calculateButton.clicked.connect(self.calculate)
-        # self.questionBox.editingFinished.connect(self.addAttribute)
         self.questionBox.returnPressed.connect(self.addAttribute)
 
         self.evalModeButton.pressed.connect(self.switchMode)
@@ -172,12 +154,9 @@ class MainWindow(QMainWindow):
         self.fileManager.evalFileChanged.connect(lambda file: self.evalFileLabel.setText(os.path.basename(file)))
         self.fileManager.prefFileChanged.connect(lambda file: self.prefFileLabel.setText(os.path.basename(file)))
 
-        # self.dealbreakerBox.stateChanged.connect(self.warnDealbreaker)
         self.dealbreakerBox.released.connect(self.warnDealbreaker)
 
         self.groupSelector.textActivated.connect(self.addGroup)
-
-        # self.nameEdit.textChanged.connect(lambda: Singleton.modeLabel.setText(self.getModeLabelText()))
 
     def closeEvent(self, a0):
         self.save()
@@ -187,15 +166,8 @@ class MainWindow(QMainWindow):
         if mode is None:
             mode = Singleton.mode
 
-        # If we've already asked, don't ask again
-        # if (file := self.fileManager.getSavedFilename(mode)) is None:
-        #     file = self.fileManager.getFile()
-        #     return
-
         j = {}
         for i in range(1, self.tabs.count()):
-            # if self.tabs.tabText(i) == 'Options':
-                # continue
             j[self.tabs.tabText(i)] = self.tabs.widget(i).serialize()
 
         self.fileManager.save(j,
@@ -256,7 +228,7 @@ class MainWindow(QMainWindow):
         l.reachedEnd.connect(lambda: self.incrementTab(1))
         l.reachedBegin.connect(lambda: self.incrementTab(-1))
         l.questionAccepted.connect(self.acceptQuestion)
-        l.skipQuestion.connect(self.skipQuestion)
+        # l.skipQuestion.connect(self.skipQuestion)
         return l
 
     def initLists(self, json):
@@ -274,21 +246,11 @@ class MainWindow(QMainWindow):
                 continue
             self.groupSelector.addItem(catagory)
             self.tabs.addTab(self._initList(traits), catagory)
-            # self.tabs.insertTab(0, list, catagory)
-
-    @depricated
-    def skipQuestion(self):
-        self._questionsAnswered -= 1
 
     def acceptQuestion(self):
         # Double check that the question exists
         if (item := self.currentList.currentItem()) is not None:
-            # We do this inside of updateQuestionGui() now
-            # self.progressBar.setValue(round((self._questionsAnswered / self.getTotalTraits()) * 100))
-
             # If the trait is already marked as a dealbreaker, then this will unset it
-            # Just kidding, this will cause it so you can't undo a dealbreaker
-            # if not item.dealbreakerState:
             # Also, if we're in eval mode, we don't care
             if Singleton.mode == EVAL or not self.dealbreakerBox:
                 item.value = self.responseSlider.value()
@@ -302,14 +264,6 @@ class MainWindow(QMainWindow):
         # If we're going back, go to the bottom question
         if amt < 0 and self.currentList is not None:
             self.currentList.setCurrentItem(self.currentList.item(self.currentList.count() - 1))
-
-    @todo
-    def applyTolerance(self, amt, tolerances):
-        # This has to be in order
-        for tolerance in sorted(tolerances.values(), reverse=True):
-            if amt >= tolerance:
-                return invertDict(tolerances)[tolerance]
-        raise UserWarning("You've somehow scored less than is possible.")
 
     def updateQuestionGui(self):
         """ Run whenever the question is changed and we need to update the
@@ -360,17 +314,6 @@ class MainWindow(QMainWindow):
             return "How important is it to you that..."
         elif Singleton.mode == EVAL:
             return 'Is it true that...'
-            # return f'Regarding {self.name}...' if self.name != '' else ''
-
-    @depricated
-    def getTotalTraits(self):
-        # return len(self.allTraits)
-        # This way is probably slightly faster
-        net = 0
-        # Start at 1 to avoid the Options menu
-        for i in range(1, self.tabs.count()):
-            net += self.tabs.widget(i).count()
-        return net
 
     def warnDealbreaker(self):
         """ Run when the dealbreaker box state has changed """
@@ -465,10 +408,6 @@ class MainWindow(QMainWindow):
             self.skipButton.setText('Remove Question')
 
         # Update all the Traits to make sure they have to correct answered status for this mode
-        # Start at 1 to avoid the Options menu
-        # for i in range(1, self.tabs.count()):
-            # for k in range((list := self.tabs.widget(i)).count()):
-                # list.item(k).update()
         for trait in self.allTraits:
             trait.update()
 
@@ -542,14 +481,19 @@ class MainWindow(QMainWindow):
     def allTraits(self):
        return [self.tabs.widget(i).item(k) for i in range(1, self.tabs.count()) for k in range(self.tabs.widget(i).count())]
 
-
     @property
     def currentList(self):
-        # return self.traitJson[self.tabs.tabText(self.tabs.currentIndex())]
         return self.tabs.currentWidget() if self.tabs.tabText(self.tabs.currentIndex()) != 'Options' else None
 
 if __name__ == "__main__":
     app = QApplication([])
-    widget = MainWindow()
-    widget.show()
-    sys.exit(app.exec())
+    window = MainWindow()
+    window.show()
+    try:
+        rtn = app.exec()
+    except Exception as err:
+        if Singleton.debugging:
+            raise err
+        else:
+            window.save()
+    sys.exit(rtn)

@@ -2,7 +2,6 @@ from PyQt6.QtWidgets import QDialogButtonBox, QDialog
 from PyQt6.QtCore import QSize
 from PyQt6 import uic
 from pathlib import Path
-from Cope import debug
 from Singleton import Singleton
 
 class ResultsMenu(QDialog):

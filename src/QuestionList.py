@@ -3,8 +3,6 @@ from PyQt6.QtWidgets import QApplication, QListWidget, QListView, QMessageBox, Q
 from PyQt6.QtCore import QEvent, QFile, Qt, QSize, pyqtSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QFileDialog, QMainWindow, QWidget, QDialogButtonBox, QSlider
-# from PyQt6 import
-from Cope import debug, todo, depricated
 
 from Trait import *
 from ResultsMenu import ResultsMenu
@@ -27,8 +25,6 @@ class QuestionList(QListWidget):
         # Connect all the signals
         self.bindSignals()
 
-        # So it handles clicking on an item slightly differently
-        self.itemClicked.connect(self.onTraitClicked)
         self.setIconSize(QSize(self.ICON_SIZE, self.ICON_SIZE))
         self.setWordWrap(self.WORD_WRAP)
         self.setAlternatingRowColors(True)
@@ -39,8 +35,6 @@ class QuestionList(QListWidget):
         # Only do things for these keys, otherwise don't accept the input
         if e.text() in ('y', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'n', 's', 'b'):
             Singleton.mainWindow.keyPressEvent(e)
-        # if e.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down):
-        #     super().keyPressEvent(e)
         elif e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self.next()
         else:
@@ -76,9 +70,7 @@ class QuestionList(QListWidget):
     def incrementQuestion(self, amt=1) -> int:
         """ Used to change the current question
             Note: This is only meant to accept -1 or 1 for the amt """
-        # i = self.index + amt
-        # self.setCurrentIndex(self.currentIndex() + amt)
-        # self.setCurrentItem(self.item(self.currentIndex() + amt))
+
         i = self.currentRow() + amt
         self.setCurrentRow(i)
         while (item := self.currentItem()) is not None and item.isHidden():
@@ -100,28 +92,15 @@ class QuestionList(QListWidget):
     def skip(self):
         if (item := self.currentItem()) is not None:
             self.skipQuestion.emit()
-
-            # if item.state != ANSWERED:
             item.state = SKIPPED
-
-            # If you go back to a question you've already answered and hit skip,
-            # then it resets the question
-            # if item.state == ANSWERED:
-                # self.resetAnswer(state=SKIPPED)
-                # self.skipQuestion.emit()
 
         self.incrementQuestion()
 
-    def onTraitClicked(self, _=False):
-        """ Called when you jump to a new question by clicking on it """
-        # self.switchTrait(self.currentRow(), self.currentIndex(), False)
-        pass
-
     def acceptAnswer(self):
         """ Run when we want to "set" the current trait """
-        if self.currentItem() is not None:# and self.currentItem().state != ANSWERED:
+        if self.currentItem() is not None:
             self.currentItem().state = ANSWERED
-            debug('question accepted', active=Singleton.debugging)
+            # debug('question accepted', active=Singleton.debugging)
 
         self.questionAccepted.emit()
         self.updateGUI.emit()

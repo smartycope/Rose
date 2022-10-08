@@ -16,6 +16,7 @@ pressing space when over a trait changes its icon?? {cm:2022-10-08}
 set the default directory to open to as the saves folder {cm:2022-10-08}
 
 consider changing the scoring in the program to be added logirithmically, so the closer it comes to 100 the more it's actually worth, but still judged the same way.
+FileManager.py line 133 & 161: add optional autoconversion
 
 consider if they negatively fulfill the value half the negative
 

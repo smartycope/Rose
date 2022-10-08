@@ -1,5 +1,4 @@
 from pathlib import Path
-from Cope import todo
 from PyQt6.QtCore import QStandardPaths
 
 EVAL = 0

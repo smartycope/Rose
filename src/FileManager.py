@@ -3,7 +3,10 @@ import shutil
 from os.path import basename, dirname, join
 
 import jstyleson as jsonc
-from Cope import debug, todo
+try:
+    from Cope import debug
+except ImportError:
+    debug = lambda *args, **_: print(*args)
 from PyQt6.QtCore import pyqtSignal, QObject
 from PyQt6.QtWidgets import (QAbstractButton, QApplication, QDialogButtonBox,
                              QFileDialog, QListView, QListWidget, QMainWindow,
@@ -33,7 +36,6 @@ class FileManager(QObject):
         fileType = '*.pref' if mode == PREF else '*.eval'
 
         if save:
-            todo('figure out how to have default suggested filenames')
             file = QFileDialog.getSaveFileName(self.parent,
                     caption=f'Save your personal preferences file'
                             if mode == PREF else
@@ -109,7 +111,6 @@ class FileManager(QObject):
         if file is None:
             file = self.getFile(save=False, mode=mode)
             if file == '' or file is None:
-                debug(clr=-1)
                 return (None,)*4
 
         # Dont touch the boilerplate file!
@@ -127,7 +128,6 @@ class FileManager(QObject):
                         QMessageBox.critical(self.parent, 'Wrong File Selected',
                             'It looks like you selected a file on a specific '
                             'person, not a preferences file.')
-                        todo('add optional autoconversion here')
                         return (None,)*4
 
                     tolerance = float(j["Tolerance"])
@@ -147,7 +147,8 @@ class FileManager(QObject):
                     debug(err, throw=True)
                     if Singleton.debugging:
                             raise err
-                    QMessageBox.critical(self.parent, 'Invalid File', 'It looks like the file you selected has an invalid format.')
+                    QMessageBox.critical(self.parent, 'Invalid File',
+                        'It looks like the file you selected has an invalid format.')
                     return (None,)*4
             elif mode == EVAL:
                 try:
@@ -155,8 +156,9 @@ class FileManager(QObject):
 
                     # We've selected a pref file instead of an eval file
                     if j['__type__'] != 'EVAL':
-                        QMessageBox.critical(self.parent, 'Wrong File Selected', 'It looks like you selected a preferences file, not a file on a specific person.')
-                        todo('add optional autoconversion here')
+                        QMessageBox.critical(self.parent, 'Wrong File Selected',
+                            'It looks like you selected a preferences file, '
+                            'not a file on a specific person.')
                         return (None,)*4
 
                     tolerance = None
@@ -171,7 +173,8 @@ class FileManager(QObject):
                         debug(err, stackTrace=True)
                         if Singleton.debugging:
                             raise err
-                        QMessageBox.critical(self.parent, 'Invalid File', 'It looks like the file you selected has an invalid format.')
+                        QMessageBox.critical(self.parent, 'Invalid File',
+                            'It looks like the file you selected has an invalid format.')
                         return (None,)*4
 
         return json, tolerance, maxUnknowns, dealbreakerLimit
@@ -211,7 +214,6 @@ class FileManager(QObject):
                     toJson["Settings"]["max unknowns"] = self.parent.maxUnknownsBox.value()
                     toJson["Settings"]["dealbreaker limit"] = self.parent.dealbreakerLimitBox.value()
                     toJson['Attributes'] = stripData(fromJson['Attributes'], PREF)
-                    # nameAddOn = ' - preferences'
                 # The file is invalid
                 except Exception as err:
                     QMessageBox.critical(self.parent, 'Invalid File', 'It looks like the file you selected has an invalid format.')
@@ -223,7 +225,6 @@ class FileManager(QObject):
                 try:
                     toJson['__type__'] = 'EVAL'
                     toJson['Attributes'] = stripData(fromJson['Attributes'], EVAL)
-                    # nameAddOn = ' - evaluation'
                 # The file is invalid
                 except Exception as err:
                     debug(err, stackTrace=True)
@@ -233,7 +234,6 @@ class FileManager(QObject):
                 debug('Impossible state reached', color=-1)
 
         with open(newFilename, 'w+') as toFile:
-            # debug(toJson, f'writing to file {newFilename}')
             jsonc.dump(toJson, toFile, indent=4)
 
         return newFilename
