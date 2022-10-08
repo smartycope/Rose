@@ -1,13 +1,18 @@
-// Boilerplate attributes that matters in a relationship. Between -100 and 100, -100 being greatly do not prefer,
-// 100 being I greatly prefer, and 0 being I'm perfectly indifferent. Explicit deal breakers are <-100 and must requires are >100
-// The constraint is set under settings at the bottom of the file, so you can use -10 - 10 if you prefer.
-// This list gets fed into the relationship evaluation program I wrote.
+// Boilerplate attributes that matter in a relationship. Between -100 and 100,
+// -100 being greatly do not prefer, 100 being I greatly prefer, and 0 being
+// perfectly indifferent.
+// Dealbreakers are either >100 or <-100, indicating they either must or must
+// not fufill the specified attribute, respectively.
+// The first value is the value of the trait, the second is the answered status,
+// 0 for not answered, 1 for answered, and 2 for skipped.
+
 {
+    // Explicitly which type of file this is. Don't touch this.
     "__type__": "PREF",
+
     // Out of 1, the minimum average points they have to score in order to enter a relationship with them
     "Tolerance": 0.75,
 
-    // These must all be between -1 and 1, irrelevant of the constraint setting -- maybe, I think that's changed
     "Attributes": {
         "Important": [
             ["You want to enter the relationship with them", 0, 0],
@@ -183,6 +188,7 @@
     "Settings": {
         // How many questions you're allowed to not know about them before they just fail
         "max unknowns": 50,
+
         // If they fail a deal-breaker question, but only partly
         "dealbreaker limit": 0.3,
     }
