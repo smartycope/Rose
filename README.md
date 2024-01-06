@@ -8,7 +8,7 @@ Rose is built on PyQt6
 git clone https://github.com/smartycope/Rose.git
 cd Rose
 pip install -r requirements.txt
-python src
+python3 src
 ```
 
 
